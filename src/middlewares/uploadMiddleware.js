@@ -1,12 +1,13 @@
 const multer = require("multer");
-const cloudinary = require("cloudinary").v2;
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const { S3Client } = require("@aws-sdk/client-s3");
+const multerS3 = require("multer-s3");
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_NAME,
-  api_key: process.env.CLOUDINARY_KEY,
-  api_secret: process.env.CLOUDINARY_SECRET,
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
 });
 
 const createUploadMiddleware = (options = {}) => {
@@ -14,17 +15,23 @@ const createUploadMiddleware = (options = {}) => {
     const defaultOptions = {
       allowedTypes: ["image/jpeg", "image/png", "video/mp4"],
       folder: "media",
-      resourceType: "auto",
     };
 
     const mergedOptions = { ...defaultOptions, ...options };
 
-    const storage = new CloudinaryStorage({
-      cloudinary: cloudinary,
-      params: {
-        folder: mergedOptions.folder,
-        resource_type: mergedOptions.resourceType,
-        allowed_formats: ["jpg", "jpeg", "png", "mp4", "mov"],
+    const storage = multerS3({
+      s3: s3Client,
+      bucket: process.env.S3_BUCKET_NAME,
+      metadata: function (req, file, cb) {
+        cb(null, {
+          fieldName: file.fieldname,
+        });
+      },
+      key: function (req, file, cb) {
+        const fileName = `${mergedOptions.folder}/${Date.now()}-${
+          file.originalname
+        }`;
+        cb(null, fileName);
       },
     });
 
@@ -43,10 +50,10 @@ const createUploadMiddleware = (options = {}) => {
     });
   } catch (error) {
     console.log("createUploadMiddleware error=> ", error);
+    throw error;
   }
 };
 
-// Pre-configured middlewares for different use cases
 const mediaUpload = createUploadMiddleware();
 const storyUpload = createUploadMiddleware({
   folder: "stories",
@@ -55,7 +62,7 @@ const storyUpload = createUploadMiddleware({
 
 const imageUpload = createUploadMiddleware({
   allowedTypes: ["image/jpeg", "image/png"],
-  resourceType: "image",
+  // folder: "images" - optional agar hum koi or folder use krna chahe to
 });
 
 module.exports = {

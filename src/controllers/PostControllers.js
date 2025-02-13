@@ -3,16 +3,6 @@ const Users = require("../models/UserModel");
 exports.createPost = async (req, res) => {
   try {
     const { text, isFree, price } = req.body;
-    const userId = req._id;
-
-    if (!userId) {
-      return res.status(400).json({ message: "User ID is required" });
-    }
-
-    const user = await Users.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
 
     if (!text && !req.files?.image && !req.files?.video) {
       return res
@@ -27,16 +17,16 @@ exports.createPost = async (req, res) => {
     }
 
     const post = new Posts({
-      userId,
+      userId: req?._id,
       text: text || null,
-      image: req.files?.image ? req.files.image[0].path : null,
-      video: req.files?.video ? req.files.video[0].path : null,
-      isFree: isFree || true,
-      price: isFree ? 0 : price,
+      image: req.files?.image ? req.files.image[0].location : null,
+      video: req.files?.video ? req.files.video[0].location : null,
+      isFree: isFree ?? true,
+      price: isFree ? 0 : Number(price),
     });
 
     await post.save();
-    res.status(201).json(post);
+    res.status(201).json({ post, status: "success" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
