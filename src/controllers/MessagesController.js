@@ -1,9 +1,9 @@
 const MessagesModel = require("./../models/MessagesModel");
 const Users = require("./../models/UserModel");
-
+const mongoose = require("mongoose");
 exports.getConversations = async (req, res) => {
   try {
-    const userId = req._id;
+    const userId = new mongoose.Types.ObjectId(req._id);
 
     const conversations = await MessagesModel.aggregate([
       {
@@ -50,10 +50,18 @@ exports.getConversations = async (req, res) => {
 
 exports.getMessages = async (req, res) => {
   try {
+    let sender = new mongoose.Types.ObjectId(req._id);
+    let receiver = new mongoose.Types.ObjectId(req.params.userId);
     const messages = await MessagesModel.find({
       $or: [
-        { sender: req._id, receiver: req.params.userId },
-        { sender: req.params.userId, receiver: req._id },
+        {
+          sender,
+          receiver,
+        },
+        {
+          sender: receiver,
+          receiver: sender,
+        },
       ],
     }).sort("createdAt");
     res.status(200).json(messages);
@@ -71,7 +79,6 @@ exports.sendMessage = async (req, res) => {
         .json({ message: "Content & reciever are important!", status: "fail" });
 
     let receiverUser = await Users.findById(receiver);
-    console.log(receiverUser);
 
     if (!receiverUser)
       return res

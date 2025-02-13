@@ -13,6 +13,7 @@ const app = express();
 const server = http.createServer(app);
 const port = process.env.PORT || 4000;
 const userRoutes = require("./src/routes/UserRoutes");
+const storiesRoutes = require("./src/routes/StoriesRoutes");
 
 app.use(express.json());
 
@@ -50,6 +51,7 @@ app.use("/auth", AuthRoutes);
 app.use("/user", authMiddleware, userRoutes);
 app.use("/post", authMiddleware, PostRoutes);
 app.use("/messages", authMiddleware, MessagesRoutes);
+app.use("/stories", authMiddleware, storiesRoutes);
 app.listen(port, () => {
   console.log(`Server started at port ${port}`);
 });
